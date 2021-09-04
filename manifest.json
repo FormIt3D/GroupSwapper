@@ -1,0 +1,9 @@
+{
+    "PluginName": "Group Swapper",
+    "PluginDescription": "Swap all instances of one Group with another.",
+    "PluginType": "Panel",
+    "Scripts": []
+    ,"Panel": "PLUGINLOCATION/index.html",
+    "PanelIcon": "PLUGINLOCATION/img/group_swapper@2x.png",
+    "Platforms": ["Windows"]
+}
