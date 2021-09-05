@@ -5,10 +5,9 @@
     <title>Dynamo Eyedropper</title>
     <META NAME="Title" CONTENT="Group Swapper">
     <META NAME="Author" CONTENT="Autodesk FormIt">
-        <script type="text/javascript" src="https://formit3d.github.io/FormItExamplePlugins/SharedPluginFiles/FormIt.js"></script>
+        <script type="text/javascript" src="https://formit3d.github.io/SharedPluginUtilities/FormIt_v22.js"></script>
         <script type="text/javascript" src="https://formit3d.github.io/FormItExamplePlugins/SharedPluginFiles/FormItInterface.js"></script>
         <script type="text/javascript" src="https://formit3d.github.io/FormItExamplePlugins/SharedPluginFiles/FormItPluginUI.js"></script>
-        <script type="text/javascript" src="https://formit3d.github.io/PropertiesPlus/PropertiesPlus_Client.js"></script>
         <script type="text/javascript" src="GroupSwapper.js"></script>
         <script type="text/javascript">
         FormItInterface.Initialize(async function () {
@@ -18,20 +17,20 @@
             {
                 var jsonMessage = JSON.parse(msg);
 
-                if (bIsSelectionForMatchInProgress)
+                if (bIsSelectionForCopyInProgress)
                 {
                     // when the FormIt selection changes, automatically update the plugin UI
                     await GroupSwapper.updateUIForCopyObject();
 
-                    bIsSelectionForMatchInProgress = false;
+                    bIsSelectionForCopyInProgress = false;
                 }
 
-                if (bIsSelectionForChangeInProgress)
+                if (bIsSelectionForReplaceInProgress)
                 {
                     // when the FormIt selection changes, automatically update the plugin UI
                     await GroupSwapper.updateUIForReplaceObject();
 
-                    bIsSelectionForChangeInProgress = false;
+                    bIsSelectionForReplaceInProgress = false;
                 }
 
                 //DynamoEyedropper.updateUI();
