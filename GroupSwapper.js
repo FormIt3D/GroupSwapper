@@ -117,7 +117,7 @@ GroupSwapper.initializeUI = async function()
 
     // when the selections are fulfilled, but incompatible
     let incompatibleSelectionsDiv = contentContainer.appendChild(document.createElement('p'));
-    incompatibleSelectionsDiv.innerHTML = 'No common inputs found in the selected Dynamo objects.';
+    incompatibleSelectionsDiv.innerHTML = 'These Groups are the same. Select a different Group for each of the two buttons above.';
     incompatibleSelectionsDiv.id = incompatibleSelectionDivID;
     contentContainer.appendChild(incompatibleSelectionsDiv);
 
@@ -134,7 +134,7 @@ GroupSwapper.initializeUI = async function()
 
 
     // create the button to apply the changes
-    reviewAndApplyDetailsDiv.appendChild(new FormIt.PluginUI.Button('Apply Changes + Run', function()
+    reviewAndApplyDetailsDiv.appendChild(new FormIt.PluginUI.Button('Apply Changes', function()
     {
 
 
@@ -240,7 +240,21 @@ GroupSwapper.updateUIForComparisonCheck = async function()
     // if both the copy object and replace object are available
     if (bIsCopyObjectAvailable && bIsReplaceObjectAvailable)
     {
-
+        // if the selected history IDs are the same, we can't proceed
+        if (nCopyObjectHistoryID != nReplaceObjectHistoryID)
+        {
+            document.getElementById(missingSelectionsDivID).className = 'hide';
+            document.getElementById(incompatibleSelectionDivID).className = 'hide';
+            document.getElementById(reviewAndApplyDetailsDivID).className = 'body';
+            document.getElementById(identicalInputsDivID).className = 'hide';
+        }
+        else
+        {
+            document.getElementById(missingSelectionsDivID).className = 'hide';
+            document.getElementById(incompatibleSelectionDivID).className = 'body';
+            document.getElementById(reviewAndApplyDetailsDivID).className = 'hide';
+            document.getElementById(identicalInputsDivID).className = 'hide';
+        }
     }
     // missing one or both objects
     else
@@ -258,6 +272,9 @@ GroupSwapper.updateUIForComparisonCheck = async function()
 // dynamo data
 let bIsCopyObjectAvailable;
 let bIsReplaceObjectAvailable;
+
+let nCopyObjectHistoryID;
+let nReplaceObjectHistoryID;
 
 GroupSwapper.getSelectedInstanceData = async function()
 {
@@ -321,6 +338,7 @@ GroupSwapper.tryGetGroupToCopy = async function()
     
     if (selectedInstanceProperties)
     {
+        nCopyObjectHistoryID = selectedInstanceProperties.nGroupHistoryID;
         await GroupSwapper.setCopyObjectToActiveState(selectedInstanceProperties);
     }
     // if the selection isn't valid, put the user in select mode
@@ -348,6 +366,7 @@ GroupSwapper.tryGetGroupToReplace = async function()
     
     if (selectedInstanceProperties)
     {
+        nReplaceObjectHistoryID = selectedInstanceProperties.nGroupHistoryID;
         await GroupSwapper.setReplaceObjectToActiveState(selectedInstanceProperties);
     }
     // if the selection isn't valid, put the user in select mode
