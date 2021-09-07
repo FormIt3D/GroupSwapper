@@ -119,9 +119,52 @@ GroupSwapper.initializeUI = async function()
     reviewAndApplyDetailsDiv.id = reviewAndApplyDetailsDivID;
 
     // create the button to apply the changes
-    reviewAndApplyDiv.appendChild(new FormIt.PluginUI.Button('Apply Changes', function()
+    reviewAndApplyDiv.appendChild(new FormIt.PluginUI.Button('Apply Changes', async function()
     {
+        // for each of the instances to be replaced, copy the selected instance to that location, then delete the original
+        for (var i = 0; i < nReplaceObjectInstanceCount; i++)
+        {
+            // get the centroid of the bounding box for the copy object
+            let copyObjectBox = await WSM.APIGetBoxReadOnly(nCopyObjectHistoryID);
+            let copyObjectLowerPoint3D = copyObjectBox.lower;
+            let copyObjectUpperPoint3D = copyObjectBox.upper;
 
+            // get the centroid of the bounding box for the replace object
+            let replaceObjectBox = await WSM.APIGetBoxReadOnly(nCopyObjectHistoryID);
+            let replaceObjectLowerPoint3D = replaceObjectBox.lower;
+            let replaceObjectUpperPoint3D = replaceObjectBox.upper;
+
+            await FormIt.ConsoleLog(JSON.stringify(aReplaceObjectInstances));
+            let thisReplaceInstanceID = aReplaceObjectInstances["paths"][i]["ids"][nHistoryDepth]["Object"];
+            let copyObjectInstanceTransform = await WSM.APIGetInstanceTransf3dReadOnly(nCurrentHistoryID, nCopyObjectInstanceID);
+            let replaceObjectInstanceTransform = await WSM.APIGetInstanceTransf3dReadOnly(nCurrentHistoryID, thisReplaceInstanceID);
+
+            // get the true copy object box centroid
+            let copyObjectBoxCentroid = getMidPointBetweenTwoPoints(copyObjectLowerPoint3D.x, copyObjectLowerPoint3D.y, copyObjectLowerPoint3D.z, copyObjectUpperPoint3D.x, copyObjectUpperPoint3D.y, copyObjectUpperPoint3D.z);
+            let copyObjectBoxCentroidPoint3D = await WSM.Geom.Point3d(copyObjectBoxCentroid.x, copyObjectBoxCentroid.y, copyObjectBoxCentroid.z);
+            let copyObjectBoxCentroidVertex3D = await WSM.APICreateVertex(0, copyObjectBoxCentroidPoint3D);
+            let copyObjectAdjustedBoxCentroidVertex3D = await WSM.APITransformObject(nCurrentHistoryID, copyObjectBoxCentroidVertex3D, copyObjectInstanceTransform);
+            let copyObjectAdjustedBoxCentroidPoint3D = await WSM.APIGetVertexPoint3dReadOnly(nCurrentHistoryID, copyObjectBoxCentroidVertex3D);
+
+            // get the true replace object box centroid
+            let replaceObjectBoxCentroid = getMidPointBetweenTwoPoints(replaceObjectLowerPoint3D.x, replaceObjectLowerPoint3D.y, replaceObjectLowerPoint3D.z, replaceObjectUpperPoint3D.x, replaceObjectUpperPoint3D.y, replaceObjectUpperPoint3D.z);
+            let replaceObjectBoxCentroidPoint3D = await WSM.Geom.Point3d(replaceObjectBoxCentroid.x, replaceObjectBoxCentroid.y, replaceObjectBoxCentroid.z);
+            let replaceObjectBoxCentroidVertex3D = await WSM.APICreateVertex(0, replaceObjectBoxCentroidPoint3D);
+            let replaceObjectAdjustedBoxCentroidVertex3D = await WSM.APITransformObject(nCurrentHistoryID, replaceObjectBoxCentroidVertex3D, replaceObjectInstanceTransform);
+            let replaceObjectAdjustedBoxCentroidPoint3D = await WSM.APIGetVertexPoint3dReadOnly(nCurrentHistoryID, replaceObjectBoxCentroidVertex3D);
+
+            // get the vector from the copy centroid to the replace centroid
+            let transformVector = getVectorBetweenTwoPoints(copyObjectAdjustedBoxCentroidPoint3D.x, copyObjectAdjustedBoxCentroidPoint3D.y, copyObjectAdjustedBoxCentroidPoint3D.z, replaceObjectAdjustedBoxCentroidPoint3D.x, replaceObjectAdjustedBoxCentroidPoint3D.y, replaceObjectAdjustedBoxCentroidPoint3D.z);
+            let transformVector3D = await WSM.Geom.Vector3d(transformVector[0], transformVector[1], transformVector[2]);
+
+            // adjust the transform of the copy object by the vector
+            let adjustedTransform = await WSM.Geom.TranslateTransform(copyObjectInstanceTransform, transformVector3D);
+
+            // copy the copy object to this replacement object
+            await WSM.APICopyOrSketchAndTransformObjects(nCurrentHistoryID, nCurrentHistoryID, nCopyObjectInstanceID, adjustedTransform, 1, false);
+
+            // delete the replacement object
+        }
 
     }).element);
 
@@ -276,68 +319,77 @@ GroupSwapper.updateUIForComparisonCheck = async function()
 
 /*** application code - runs asynchronously from plugin process to communicate with FormIt ***/
 
+let nCurrentHistoryID;
+let nHistoryDepth;
+
 // flags for whether both selections are available and valid
 let bIsCopyObjectAvailable;
 let bIsReplaceObjectAvailable;
 
 // globals to store pertinent data to display after both selections are completed
+let nCopyObjectInstanceID;
+let nCopyObjectGroupID;
 let nCopyObjectHistoryID;
 let copyObjectName;
 let nCopyObjectInstanceCount;
+let aCopyObjectInstances;
 
 let nReplaceObjectHistoryID;
 let replaceObjectName
 let nReplaceObjectInstanceCount;
+let aReplaceObjectInstances;
 
 GroupSwapper.getSelectedInstanceData = async function()
 {
     // get current history
-    nHistoryID = await FormIt.GroupEdit.GetEditingHistoryID();
+    nCurrentHistoryID = await FormIt.GroupEdit.GetEditingHistoryID();
 
     // get current selection
-    aCurrentSelection = await FormIt.Selection.GetSelections();
+    let aCurrentSelection = await FormIt.Selection.GetSelections();
 
     // only one object should be selected
     if (aCurrentSelection.length == 1)
     {
         // if you're not in the Main History, calculate the depth to extract the correct history data
-        historyDepth = (aCurrentSelection[0]["ids"].length) - 1;
+        nHistoryDepth = (aCurrentSelection[0]["ids"].length) - 1;
 
         // get objectID of the current selection
-        let nObjectID = aCurrentSelection[0]["ids"][historyDepth]["Object"];
+        let nObjectID = aCurrentSelection[0]["ids"][nHistoryDepth]["Object"];
 
         // get object type of the current selection
-        let nType = await WSM.APIGetObjectTypeReadOnly(nHistoryID, nObjectID);
+        let nType = await WSM.APIGetObjectTypeReadOnly(nCurrentHistoryID, nObjectID);
 
         // get group instance info, if there are any selected, and push the results into arrays
         if (nType == WSM.nObjectType.nInstanceType)
         {
             // get the Group family ID
-            let aGroupIDs = await WSM.APIGetObjectsByTypeReadOnly(nHistoryID, nObjectID, WSM.nObjectType.nGroupType, true);
+            let aGroupIDs = await WSM.APIGetObjectsByTypeReadOnly(nCurrentHistoryID, nObjectID, WSM.nObjectType.nGroupType, true);
             let nGroupID = aGroupIDs[0];
 
             // get the Group family History ID
-            let nGroupHistoryID = await WSM.APIGetGroupReferencedHistoryReadOnly(nHistoryID, nGroupID);
+            let nGroupHistoryID = await WSM.APIGetGroupReferencedHistoryReadOnly(nCurrentHistoryID, nGroupID);
 
             // get the Group family name
             //let groupName = PropertiesPlus.getGroupFamilyName(nGroupHistoryID);
             let groupName = await PropertiesPlus.getGroupFamilyName(nGroupHistoryID);
 
-            let nGroupReferenceHistoryID = await WSM.APIGetGroupReferencedHistoryReadOnly(nHistoryID, nGroupID);
+            let nGroupReferenceHistoryID = await WSM.APIGetGroupReferencedHistoryReadOnly(nCurrentHistoryID, nGroupID);
             //console.log("Reference history for this Group: " + referenceHistoryID);
     
             // determine how many total instances of this Group are in the model
-            let identicalGroupInstanceObject = await WSM.APIGetAllAggregateTransf3dsReadOnly(nGroupReferenceHistoryID, 0);
-            let nIdenticalInstanceCount = identicalGroupInstanceObject.paths.length;
+            let aIdenticalGroupInstances = await WSM.APIGetAllAggregateTransf3dsReadOnly(nGroupReferenceHistoryID, 0);
+            let nIdenticalInstanceCount = aIdenticalGroupInstances.paths.length;
             console.log("Number of instances in model: " + nIdenticalInstanceCount);
 
             // return an object with the instance data
             return {
+                "nInstanceID" : nObjectID,
                 "nGroupID": nGroupID, 
                 "nGroupHistoryID" : nGroupHistoryID,
                 "nGroupReferenceHistoryID" : nGroupReferenceHistoryID,
                 "groupName" : groupName,
-                "nIdenticalInstanceCount" : nIdenticalInstanceCount
+                "nIdenticalInstanceCount" : nIdenticalInstanceCount,
+                "aIdenticalGroupInstances" : aIdenticalGroupInstances
             };
         }
     }
@@ -352,8 +404,12 @@ GroupSwapper.tryGetGroupToCopy = async function()
     if (selectedInstanceProperties)
     {
         copyObjectName = selectedInstanceProperties.groupName;
+        nCopyObjectInstanceID = selectedInstanceProperties.nInstanceID;
+        nCopyObjectGroupID = selectedInstanceProperties.nGroupID;
         nCopyObjectHistoryID = selectedInstanceProperties.nGroupHistoryID;
         nCopyObjectInstanceCount = selectedInstanceProperties.nIdenticalInstanceCount;
+        aCopyObjectInstances = selectedInstanceProperties.aIdenticalGroupInstances;
+        
         await GroupSwapper.setCopyObjectToActiveState(selectedInstanceProperties);
     }
     // if the selection isn't valid, put the user in select mode
@@ -384,6 +440,8 @@ GroupSwapper.tryGetGroupToReplace = async function()
         replaceObjectName = selectedInstanceProperties.groupName;
         nReplaceObjectHistoryID = selectedInstanceProperties.nGroupHistoryID;
         nReplaceObjectInstanceCount = selectedInstanceProperties.nIdenticalInstanceCount;
+        aReplaceObjectInstances = selectedInstanceProperties.aIdenticalGroupInstances;
+
         await GroupSwapper.setReplaceObjectToActiveState(selectedInstanceProperties);
     }
     // if the selection isn't valid, put the user in select mode
