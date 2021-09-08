@@ -121,50 +121,26 @@ GroupSwapper.initializeUI = async function()
     // create the button to apply the changes
     reviewAndApplyDiv.appendChild(new FormIt.PluginUI.Button('Apply Changes', async function()
     {
+        await FormIt.UndoManagement.BeginState();
+
         // for each of the instances to be replaced, copy the selected instance to that location, then delete the original
         for (var i = 0; i < nReplaceObjectInstanceCount; i++)
         {
-            // get the centroid of the bounding box for the copy object
-            let copyObjectBox = await WSM.APIGetBoxReadOnly(nCopyObjectHistoryID);
-            let copyObjectLowerPoint3D = copyObjectBox.lower;
-            let copyObjectUpperPoint3D = copyObjectBox.upper;
+            let nReplaceObjectHistoryDepth = aReplaceObjectInstances["paths"][i]["ids"].length - 1;
+            let nReplaceObjectInstanceID = aReplaceObjectInstances["paths"][i]["ids"][nReplaceObjectHistoryDepth]["Object"];
+            let nReplaceObjectHistoryID = aReplaceObjectInstances["paths"][i]["ids"][nReplaceObjectHistoryDepth]["History"];
+            let nReplaceObjectContextHistoryID = aReplaceObjectInstances["paths"][i]["ids"][0]["History"];
+            let replaceObjectInstanceTransform = await WSM.APIGetInstanceTransf3dReadOnly(nReplaceObjectHistoryID, nReplaceObjectInstanceID);
+            //await FormIt.ConsoleLog(JSON.stringify(aReplaceObjectInstances));
 
-            // get the centroid of the bounding box for the replace object
-            let replaceObjectBox = await WSM.APIGetBoxReadOnly(nCopyObjectHistoryID);
-            let replaceObjectLowerPoint3D = replaceObjectBox.lower;
-            let replaceObjectUpperPoint3D = replaceObjectBox.upper;
+            // create new instances of the copy object, transformed to match the replacement object
+            await WSM.APIAddInstancesToGroup(nReplaceObjectHistoryID, nCopyObjectGroupID, replaceObjectInstanceTransform);
 
-            await FormIt.ConsoleLog(JSON.stringify(aReplaceObjectInstances));
-            let thisReplaceInstanceID = aReplaceObjectInstances["paths"][i]["ids"][nHistoryDepth]["Object"];
-            let copyObjectInstanceTransform = await WSM.APIGetInstanceTransf3dReadOnly(nCurrentHistoryID, nCopyObjectInstanceID);
-            let replaceObjectInstanceTransform = await WSM.APIGetInstanceTransf3dReadOnly(nCurrentHistoryID, thisReplaceInstanceID);
-
-            // get the true copy object box centroid
-            let copyObjectBoxCentroid = getMidPointBetweenTwoPoints(copyObjectLowerPoint3D.x, copyObjectLowerPoint3D.y, copyObjectLowerPoint3D.z, copyObjectUpperPoint3D.x, copyObjectUpperPoint3D.y, copyObjectUpperPoint3D.z);
-            let copyObjectBoxCentroidPoint3D = await WSM.Geom.Point3d(copyObjectBoxCentroid.x, copyObjectBoxCentroid.y, copyObjectBoxCentroid.z);
-            let copyObjectBoxCentroidVertex3D = await WSM.APICreateVertex(0, copyObjectBoxCentroidPoint3D);
-            let copyObjectAdjustedBoxCentroidVertex3D = await WSM.APITransformObject(nCurrentHistoryID, copyObjectBoxCentroidVertex3D, copyObjectInstanceTransform);
-            let copyObjectAdjustedBoxCentroidPoint3D = await WSM.APIGetVertexPoint3dReadOnly(nCurrentHistoryID, copyObjectBoxCentroidVertex3D);
-
-            // get the true replace object box centroid
-            let replaceObjectBoxCentroid = getMidPointBetweenTwoPoints(replaceObjectLowerPoint3D.x, replaceObjectLowerPoint3D.y, replaceObjectLowerPoint3D.z, replaceObjectUpperPoint3D.x, replaceObjectUpperPoint3D.y, replaceObjectUpperPoint3D.z);
-            let replaceObjectBoxCentroidPoint3D = await WSM.Geom.Point3d(replaceObjectBoxCentroid.x, replaceObjectBoxCentroid.y, replaceObjectBoxCentroid.z);
-            let replaceObjectBoxCentroidVertex3D = await WSM.APICreateVertex(0, replaceObjectBoxCentroidPoint3D);
-            let replaceObjectAdjustedBoxCentroidVertex3D = await WSM.APITransformObject(nCurrentHistoryID, replaceObjectBoxCentroidVertex3D, replaceObjectInstanceTransform);
-            let replaceObjectAdjustedBoxCentroidPoint3D = await WSM.APIGetVertexPoint3dReadOnly(nCurrentHistoryID, replaceObjectBoxCentroidVertex3D);
-
-            // get the vector from the copy centroid to the replace centroid
-            let transformVector = getVectorBetweenTwoPoints(copyObjectAdjustedBoxCentroidPoint3D.x, copyObjectAdjustedBoxCentroidPoint3D.y, copyObjectAdjustedBoxCentroidPoint3D.z, replaceObjectAdjustedBoxCentroidPoint3D.x, replaceObjectAdjustedBoxCentroidPoint3D.y, replaceObjectAdjustedBoxCentroidPoint3D.z);
-            let transformVector3D = await WSM.Geom.Vector3d(transformVector[0], transformVector[1], transformVector[2]);
-
-            // adjust the transform of the copy object by the vector
-            let adjustedTransform = await WSM.Geom.TranslateTransform(copyObjectInstanceTransform, transformVector3D);
-
-            // copy the copy object to this replacement object
-            await WSM.APICopyOrSketchAndTransformObjects(nCurrentHistoryID, nCurrentHistoryID, nCopyObjectInstanceID, adjustedTransform, 1, false);
-
-            // delete the replacement object
+            // delete the instance that has now been replaced
+            await WSM.APIDeleteObject(nReplaceObjectHistoryID, nReplaceObjectInstanceID);
         }
+
+        await FormIt.UndoManagement.EndState("Group Swapper plugin");
 
     }).element);
 
