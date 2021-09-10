@@ -121,26 +121,8 @@ GroupSwapper.initializeUI = async function()
     // create the button to apply the changes
     reviewAndApplyDiv.appendChild(new FormIt.PluginUI.Button('Apply Changes', async function()
     {
-        await FormIt.UndoManagement.BeginState();
-
-        // for each of the instances to be replaced, copy the selected instance to that location, then delete the original
-        for (var i = 0; i < nReplaceObjectInstanceCount; i++)
-        {
-            let nReplaceObjectHistoryDepth = aReplaceObjectInstances["paths"][i]["ids"].length - 1;
-            let nReplaceObjectInstanceID = aReplaceObjectInstances["paths"][i]["ids"][nReplaceObjectHistoryDepth]["Object"];
-            let nReplaceObjectHistoryID = aReplaceObjectInstances["paths"][i]["ids"][nReplaceObjectHistoryDepth]["History"];
-            let nReplaceObjectContextHistoryID = aReplaceObjectInstances["paths"][i]["ids"][0]["History"];
-            let replaceObjectInstanceTransform = await WSM.APIGetInstanceTransf3dReadOnly(nReplaceObjectHistoryID, nReplaceObjectInstanceID);
-            //await FormIt.ConsoleLog(JSON.stringify(aReplaceObjectInstances));
-
-            // create new instances of the copy object, transformed to match the replacement object
-            await WSM.APIAddInstancesToGroup(nReplaceObjectHistoryID, nCopyObjectGroupID, replaceObjectInstanceTransform);
-
-            // delete the instance that has now been replaced
-            await WSM.APIDeleteObject(nReplaceObjectHistoryID, nReplaceObjectInstanceID);
-        }
-
-        await FormIt.UndoManagement.EndState("Group Swapper plugin");
+        
+        await GroupSwapper.swapAllInstancesWithSelectedInstance();
 
     }).element);
 
@@ -308,12 +290,12 @@ let nCopyObjectGroupID;
 let nCopyObjectHistoryID;
 let copyObjectName;
 let nCopyObjectInstanceCount;
-let aCopyObjectInstances;
+let aCopyObjectInstancePaths;
 
 let nReplaceObjectHistoryID;
 let replaceObjectName
 let nReplaceObjectInstanceCount;
-let aReplaceObjectInstances;
+let aReplaceObjectInstancePaths;
 
 GroupSwapper.getSelectedInstanceData = async function()
 {
@@ -384,7 +366,7 @@ GroupSwapper.tryGetGroupToCopy = async function()
         nCopyObjectGroupID = selectedInstanceProperties.nGroupID;
         nCopyObjectHistoryID = selectedInstanceProperties.nGroupHistoryID;
         nCopyObjectInstanceCount = selectedInstanceProperties.nIdenticalInstanceCount;
-        aCopyObjectInstances = selectedInstanceProperties.aIdenticalGroupInstances;
+        aCopyObjectInstancePaths = selectedInstanceProperties.aIdenticalGroupInstances;
         
         await GroupSwapper.setCopyObjectToActiveState(selectedInstanceProperties);
     }
@@ -416,7 +398,7 @@ GroupSwapper.tryGetGroupToReplace = async function()
         replaceObjectName = selectedInstanceProperties.groupName;
         nReplaceObjectHistoryID = selectedInstanceProperties.nGroupHistoryID;
         nReplaceObjectInstanceCount = selectedInstanceProperties.nIdenticalInstanceCount;
-        aReplaceObjectInstances = selectedInstanceProperties.aIdenticalGroupInstances;
+        aReplaceObjectInstancePaths = selectedInstanceProperties.aIdenticalGroupInstances;
 
         await GroupSwapper.setReplaceObjectToActiveState(selectedInstanceProperties);
     }
@@ -435,4 +417,42 @@ GroupSwapper.tryGetGroupToReplace = async function()
         GroupSwapper.setReplaceObjectToSelectingState();
         await GroupSwapper.updateUIForComparisonCheck();
     }
+}
+
+// the actual group swap mechanism
+GroupSwapper.swapAllInstancesWithSelectedInstance = async function()
+{
+    await FormIt.UndoManagement.BeginState();
+
+    // for each of the instances to be replaced, copy the selected instance to that location, then delete the original
+    for (var i = 0; i < nReplaceObjectInstanceCount; i++)
+    {
+        let replaceObjectInstanceData = await WSM.GroupInstancePath.GetFinalObjectHistoryID(aReplaceObjectInstancePaths["paths"][i]);
+        let nReplaceObjectInstanceID = replaceObjectInstanceData["Object"];
+        let nReplaceObjectContextHistoryID = replaceObjectInstanceData["History"];
+        let replaceObjectInstanceTransform = await WSM.APIGetInstanceTransf3dReadOnly(nReplaceObjectContextHistoryID, nReplaceObjectInstanceID);
+        //await FormIt.ConsoleLog(JSON.stringify(aReplaceObjectInstancePaths));
+
+        let nCopyObjectInstanceData = await WSM.GroupInstancePath.GetFinalObjectHistoryID(aReplaceObjectInstancePaths["paths"][0]);
+        let nCopyObjectContextHistoryID = nCopyObjectInstanceData["History"];
+
+        // if the copy object and replace object are in the same history, proceed
+        if (nCopyObjectContextHistoryID == nReplaceObjectContextHistoryID)
+        {
+            // create new instances of the copy object, transformed to match the replacement object
+            await WSM.APIAddInstancesToGroup(nReplaceObjectContextHistoryID, nCopyObjectGroupID, replaceObjectInstanceTransform);
+
+            // delete the instance that has now been replaced
+            await WSM.APIDeleteObject(nReplaceObjectContextHistoryID, nReplaceObjectInstanceID);
+        }
+        // otherwise, need to use a different API that supports cross-history operations
+        else 
+        {
+            // TODO: figure out how to get this to work
+
+            //await WSM.APICopyOrSketchAndTransformObjects(nCopyObjectContextHistoryID, nReplaceObjectContextHistoryID, nCopyObjectInstanceID, replaceObjectInstanceTransform, 1, false);
+        }
+    }
+
+    await FormIt.UndoManagement.EndState("Group Swapper plugin");
 }
