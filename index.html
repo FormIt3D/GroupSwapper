@@ -19,20 +19,20 @@
             {
                 var jsonMessage = JSON.parse(msg);
 
-                if (bIsSelectionForCopyInProgress)
+                if (GroupSwapper.bIsSelectionForCopyInProgress)
                 {
                     // when the FormIt selection changes, automatically update the plugin UI
                     await GroupSwapper.updateUIForCopyObject();
 
-                    bIsSelectionForCopyInProgress = false;
+                    GroupSwapper.bIsSelectionForCopyInProgress = false;
                 }
 
-                if (bIsSelectionForReplaceInProgress)
+                if (GroupSwapper.bIsSelectionForReplaceInProgress)
                 {
                     // when the FormIt selection changes, automatically update the plugin UI
                     await GroupSwapper.updateUIForReplaceObject();
 
-                    bIsSelectionForReplaceInProgress = false;
+                    GroupSwapper.bIsSelectionForReplaceInProgress = false;
                 }
 
                 //DynamoEyedropper.updateUI();

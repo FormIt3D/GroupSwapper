@@ -6,29 +6,29 @@ if (typeof GroupSwapper == 'undefined')
 /*** web/UI code - runs natively in the plugin process ***/
 
 // flag to indicate a selection is in progress
-let bIsSelectionForCopyInProgress = false;
-let bIsSelectionForReplaceInProgress = false;
+GroupSwapper.bIsSelectionForCopyInProgress = false;
+GroupSwapper.bIsSelectionForReplaceInProgress = false;
 
 // IDs input elements that need to be referenced or updated
 // copy object section
-const copyObjectGroupNameID = 'copyObjectGroupName';
-const copyObjectInstanceCountID = 'bopyObjectInstanceCount';
+GroupSwapper.copyObjectGroupNameID = 'copyObjectGroupName';
+GroupSwapper.copyObjectInstanceCountID = 'bopyObjectInstanceCount';
 // replace object section
-const replaceObjectGroupNameID = 'replaceObjectGroupName';
-const replaceObjectInstanceCountID = 'replaceObjectInstanceCount';
+GroupSwapper.replaceObjectGroupNameID = 'replaceObjectGroupName';
+GroupSwapper.replaceObjectInstanceCountID = 'replaceObjectInstanceCount';
 // review and apply section
-const missingSelectionsDivID = 'noSelectionsDiv';
-const incompatibleSelectionDivID = 'incompatibleSelectionDiv';
-const identicalInputsDivID = 'identicalInputsDiv';
-const reviewAndApplyDivID = 'reviewAndApplySection';
-const reviewAndApplyDetailsDivID = 'reviewAndApplyDetails';
+GroupSwapper.missingSelectionsDivID = 'noSelectionsDiv';
+GroupSwapper.incompatibleSelectionDivID = 'incompatibleSelectionDiv';
+GroupSwapper.identicalInputsDivID = 'identicalInputsDiv';
+GroupSwapper.reviewAndApplyDivID = 'reviewAndApplySection';
+GroupSwapper.reviewAndApplyDetailsDivID = 'reviewAndApplyDetails';
 
-const selectionMessagePrefixText = 'Select a Group instance ';
-const historyIDPrefixText = 'ID: ';
-const groupNamePrefixText = '';
-const identicalInstancePrefixText = 'Instances in model: ';
-const objectIDSelectingText = 'Selecting...';
-const notSetText = '(not set)';
+GroupSwapper.selectionMessagePrefixText = 'Select a Group instance ';
+GroupSwapper.historyIDPrefixText = 'ID: ';
+GroupSwapper.groupNamePrefixText = '';
+GroupSwapper.identicalInstancePrefixText = 'Instances in model: ';
+GroupSwapper.objectIDSelectingText = 'Selecting...';
+GroupSwapper.notSetText = '(not set)';
 
 GroupSwapper.initializeUI = async function()
 {
@@ -41,7 +41,7 @@ GroupSwapper.initializeUI = async function()
     window.document.body.appendChild(contentContainer);
 
     // create the header
-    contentContainer.appendChild(new FormIt.PluginUI.HeaderModule('Group Swapper', 'Replace all instances of one Group with another.').element);
+    contentContainer.appendChild(new FormIt.PluginUI.HeaderModule('Group Swapper', 'Replace all instances of one Group with another in the current editing context.').element);
 
     /* group to copy */
 
@@ -52,14 +52,14 @@ GroupSwapper.initializeUI = async function()
 
     // the name of the object to copy
     let groupToCopyNameDiv = document.createElement('div');
-    groupToCopyNameDiv.innerHTML = notSetText;
-    groupToCopyNameDiv.id = copyObjectGroupNameID;
+    groupToCopyNameDiv.innerHTML = GroupSwapper.notSetText;
+    groupToCopyNameDiv.id = GroupSwapper.copyObjectGroupNameID;
     contentContainer.appendChild(groupToCopyNameDiv);
 
     // the group instance count
     let groupToCopyCountDiv = document.createElement('div');
     groupToCopyCountDiv.innerHTML = '';
-    groupToCopyCountDiv.id = copyObjectInstanceCountID;
+    groupToCopyCountDiv.id = GroupSwapper.copyObjectInstanceCountID;
     contentContainer.appendChild(groupToCopyCountDiv);
 
     // create the button to select the object to match
@@ -74,14 +74,14 @@ GroupSwapper.initializeUI = async function()
 
     // the name of the object to change
     let groupToReplaceNameDiv = document.createElement('div');
-    groupToReplaceNameDiv.innerHTML = notSetText;
-    groupToReplaceNameDiv.id = replaceObjectGroupNameID;
+    groupToReplaceNameDiv.innerHTML = GroupSwapper.notSetText;
+    groupToReplaceNameDiv.id = GroupSwapper.replaceObjectGroupNameID;
     contentContainer.appendChild(groupToReplaceNameDiv);
 
     // the group instance count
     let groupToReplaceCountDiv = document.createElement('div');
     groupToReplaceCountDiv.innerHTML = '';
-    groupToReplaceCountDiv.id = replaceObjectInstanceCountID;
+    groupToReplaceCountDiv.id = GroupSwapper.replaceObjectInstanceCountID;
     contentContainer.appendChild(groupToReplaceCountDiv);
 
     // create the button to select the object to change
@@ -95,33 +95,33 @@ GroupSwapper.initializeUI = async function()
     // when not all selections have been fulfilled
     let missingSelectionsDiv = contentContainer.appendChild(document.createElement('p'));
     missingSelectionsDiv.innerHTML = 'Select objects above to continue.';
-    missingSelectionsDiv.id = missingSelectionsDivID;
+    missingSelectionsDiv.id = GroupSwapper.missingSelectionsDivID;
     contentContainer.appendChild(missingSelectionsDiv);
 
     // when the selections are fulfilled, but incompatible
     let incompatibleSelectionsDiv = contentContainer.appendChild(document.createElement('p'));
     incompatibleSelectionsDiv.innerHTML = 'These Groups are the same. Select a different Group for each of the two buttons above.';
-    incompatibleSelectionsDiv.id = incompatibleSelectionDivID;
+    incompatibleSelectionsDiv.id = GroupSwapper.incompatibleSelectionDivID;
     contentContainer.appendChild(incompatibleSelectionsDiv);
 
     // when the selections are fulfilled, compatible, but identical
     let identicalInputsDiv = contentContainer.appendChild(document.createElement('p'));
     identicalInputsDiv.innerHTML = 'All input values are identical.';
-    identicalInputsDiv.id = identicalInputsDivID;
+    identicalInputsDiv.id = GroupSwapper.identicalInputsDivID;
     contentContainer.appendChild(identicalInputsDiv);
 
     // create the affected inputs container
     // will be hidden until both selections are valid
     let reviewAndApplyDiv = contentContainer.appendChild(document.createElement('div'));
-    reviewAndApplyDiv.id = reviewAndApplyDivID;
+    reviewAndApplyDiv.id = GroupSwapper.reviewAndApplyDivID;
 
     let reviewAndApplyDetailsDiv = reviewAndApplyDiv.appendChild(document.createElement('div'));
-    reviewAndApplyDetailsDiv.id = reviewAndApplyDetailsDivID;
+    reviewAndApplyDetailsDiv.id = GroupSwapper.reviewAndApplyDetailsDivID;
 
     // create the button to apply the changes
     reviewAndApplyDiv.appendChild(new FormIt.PluginUI.Button('Apply Changes', async function()
     {
-        
+
         await GroupSwapper.swapAllInstancesWithSelectedInstance();
 
     }).element);
@@ -142,12 +142,12 @@ GroupSwapper.updateUIForCopyObject = async function()
 
 GroupSwapper.setCopyObjectToActiveState = async function(copyObjectData)
 {    
-    document.getElementById(copyObjectGroupNameID).innerHTML = groupNamePrefixText + copyObjectData.groupName /* + ' (ID: ' + copyObjectData.nGroupHistoryID + ')'*/;
-    document.getElementById(copyObjectInstanceCountID).innerHTML = identicalInstancePrefixText + copyObjectData.nIdenticalInstanceCount;
+    document.getElementById(GroupSwapper.copyObjectGroupNameID).innerHTML = GroupSwapper.groupNamePrefixText + copyObjectData.groupName /* + ' (ID: ' + copyObjectData.nGroupHistoryID + ')'*/;
+    document.getElementById(GroupSwapper.copyObjectInstanceCountID).innerHTML = GroupSwapper.identicalInstancePrefixText + copyObjectData.nIdenticalInstanceCount;
 
-    bIsCopyObjectAvailable = true;
+    GroupSwapper.bIsCopyObjectAvailable = true;
 
-    if (bIsCopyObjectAvailable && bIsReplaceObjectAvailable)
+    if (GroupSwapper.bIsCopyObjectAvailable && GroupSwapper.bIsReplaceObjectAvailable)
     {
         console.log("Both objects are present, starting comparison check...");
 
@@ -161,16 +161,16 @@ GroupSwapper.setCopyObjectToActiveState = async function(copyObjectData)
 
 GroupSwapper.setCopyObjectToSelectingState = function()
 {
-    document.getElementById(copyObjectGroupNameID).innerHTML = objectIDSelectingText;
-    document.getElementById(copyObjectInstanceCountID).innerHTML = '';
+    document.getElementById(GroupSwapper.copyObjectGroupNameID).innerHTML = GroupSwapper.objectIDSelectingText;
+    document.getElementById(GroupSwapper.copyObjectInstanceCountID).innerHTML = '';
 }
 
 GroupSwapper.setCopyObjectToUnsetState = function()
 {
-    document.getElementById(copyObjectGroupNameID).innerHTML = notSetText;
-    document.getElementById(copyObjectInstanceCountID).innerHTML = '';
+    document.getElementById(GroupSwapper.copyObjectGroupNameID).innerHTML = GroupSwapper.notSetText;
+    document.getElementById(GroupSwapper.copyObjectInstanceCountID).innerHTML = '';
 
-    bIsCopyObjectAvailable = false;
+    GroupSwapper.bIsCopyObjectAvailable = false;
 }
 
 /*** update mechanisms for the replacement object section ***/
@@ -182,12 +182,12 @@ GroupSwapper.updateUIForReplaceObject = async function()
 
 GroupSwapper.setReplaceObjectToActiveState = async function(replaceObjectData)
 {
-    document.getElementById(replaceObjectGroupNameID).innerHTML = groupNamePrefixText + replaceObjectData.groupName /*+ ' (ID: ' + replaceObjectData.nGroupHistoryID + ')'*/;
-    document.getElementById(replaceObjectInstanceCountID).innerHTML = identicalInstancePrefixText + replaceObjectData.nIdenticalInstanceCount;
+    document.getElementById(GroupSwapper.replaceObjectGroupNameID).innerHTML = GroupSwapper.groupNamePrefixText + replaceObjectData.groupName /*+ ' (ID: ' + replaceObjectData.nGroupHistoryID + ')'*/;
+    document.getElementById(GroupSwapper.replaceObjectInstanceCountID).innerHTML = GroupSwapper.identicalInstancePrefixText + replaceObjectData.nIdenticalInstanceCount;
 
-    bIsReplaceObjectAvailable = true;
+    GroupSwapper.bIsReplaceObjectAvailable = true;
 
-    if (bIsCopyObjectAvailable && bIsReplaceObjectAvailable)
+    if (GroupSwapper.bIsCopyObjectAvailable && GroupSwapper.bIsReplaceObjectAvailable)
     {
         console.log("Both objects are present, starting comparison check...");
 
@@ -201,16 +201,16 @@ GroupSwapper.setReplaceObjectToActiveState = async function(replaceObjectData)
 
 GroupSwapper.setReplaceObjectToSelectingState = function()
 {
-    document.getElementById(replaceObjectGroupNameID).innerHTML = objectIDSelectingText;
-    document.getElementById(replaceObjectInstanceCountID).innerHTML = '';
+    document.getElementById(GroupSwapper.replaceObjectGroupNameID).innerHTML = GroupSwapper.objectIDSelectingText;
+    document.getElementById(GroupSwapper.replaceObjectInstanceCountID).innerHTML = '';
 }
 
 GroupSwapper.setReplaceObjectToUnsetState = function()
 {
-    document.getElementById(replaceObjectGroupNameID).innerHTML = notSetText;
-    document.getElementById(replaceObjectInstanceCountID).innerHTML = '';
+    document.getElementById(GroupSwapper.replaceObjectGroupNameID).innerHTML = GroupSwapper.notSetText;
+    document.getElementById(GroupSwapper.replaceObjectInstanceCountID).innerHTML = '';
 
-    bIsReplaceObjectAvailable = false;
+    GroupSwapper.bIsReplaceObjectAvailable = false;
 }
 
 /*** update mechanisms for the comparison section ***/
@@ -218,89 +218,89 @@ GroupSwapper.setReplaceObjectToUnsetState = function()
 GroupSwapper.updateUIForComparisonCheck = async function()
 {
     // if both the copy object and replace object are available
-    if (bIsCopyObjectAvailable && bIsReplaceObjectAvailable)
+    if (GroupSwapper.bIsCopyObjectAvailable && GroupSwapper.bIsReplaceObjectAvailable)
     {
         // the copy and replace object history IDs must be different to proceed
-        if (nCopyObjectHistoryID != nReplaceObjectHistoryID)
+        if (GroupSwapper.nCopyObjectHistoryID != GroupSwapper.nReplaceObjectHistoryID)
         {
-            document.getElementById(missingSelectionsDivID).className = 'hide';
-            document.getElementById(incompatibleSelectionDivID).className = 'hide';
-            document.getElementById(reviewAndApplyDivID).className = 'body';
-            document.getElementById(identicalInputsDivID).className = 'hide';
+            document.getElementById(GroupSwapper.missingSelectionsDivID).className = 'hide';
+            document.getElementById(GroupSwapper.incompatibleSelectionDivID).className = 'hide';
+            document.getElementById(GroupSwapper.reviewAndApplyDivID).className = 'body';
+            document.getElementById(GroupSwapper.identicalInputsDivID).className = 'hide';
 
             // before we proceed, delete all children of the review and apply details div
-            document.getElementById(reviewAndApplyDetailsDivID).innerHTML = ("");
+            document.getElementById(GroupSwapper.reviewAndApplyDetailsDivID).innerHTML = ("");
 
             let operationAffectsDiv = document.createElement('div');
             operationAffectsDiv.className = 'codeSnippet';
             operationAffectsDiv.style.fontStyle = 'normal';
-            operationAffectsDiv.innerHTML = copyObjectName /*+ '(' + nCopyObjectHistoryID + ')'*/ + ' \u279e ' + replaceObjectName /*+ '(' + nReplaceObjectHistoryID + ')'*/;
-            document.getElementById(reviewAndApplyDetailsDivID).appendChild(operationAffectsDiv)
+            operationAffectsDiv.innerHTML = GroupSwapper.copyObjectName /*+ '(' + GroupSwapper.nCopyObjectHistoryID + ')'*/ + ' \u279e ' + GroupSwapper.replaceObjectName /*+ '(' + GroupSwapper.nReplaceObjectHistoryID + ')'*/;
+            document.getElementById(GroupSwapper.reviewAndApplyDetailsDivID).appendChild(operationAffectsDiv)
 
             // line break
-            document.getElementById(reviewAndApplyDetailsDivID).appendChild(document.createElement('br'));
+            document.getElementById(GroupSwapper.reviewAndApplyDetailsDivID).appendChild(document.createElement('br'));
 
             let affectStatement = document.createElement('div');
-            if (nReplaceObjectInstanceCount > 1)
+            if (GroupSwapper.nReplaceObjectInstanceCount > 1)
             {
-                affectStatement.innerHTML = 'This operation will affect ' + nReplaceObjectInstanceCount + ' instances in the model.';
+                affectStatement.innerHTML = 'This operation will affect ' + GroupSwapper.nReplaceObjectInstanceCount + ' instances in the model.';
             }
             else 
             {
-                affectStatement.innerHTML = 'This operation will affect ' + nReplaceObjectInstanceCount + ' instance in the model.';
+                affectStatement.innerHTML = 'This operation will affect ' + GroupSwapper.nReplaceObjectInstanceCount + ' instance in the model.';
             }
 
-            document.getElementById(reviewAndApplyDetailsDivID).appendChild(affectStatement);
+            document.getElementById(GroupSwapper.reviewAndApplyDetailsDivID).appendChild(affectStatement);
 
             // line break
-            document.getElementById(reviewAndApplyDetailsDivID).appendChild(document.createElement('br'));
+            document.getElementById(GroupSwapper.reviewAndApplyDetailsDivID).appendChild(document.createElement('br'));
         }
         // otherwise, the history IDs are identical, so let the user know that we can't proceed
         else
         {
-            document.getElementById(missingSelectionsDivID).className = 'hide';
-            document.getElementById(incompatibleSelectionDivID).className = 'body';
-            document.getElementById(reviewAndApplyDivID).className = 'hide';
-            document.getElementById(identicalInputsDivID).className = 'hide';
+            document.getElementById(GroupSwapper.missingSelectionsDivID).className = 'hide';
+            document.getElementById(GroupSwapper.incompatibleSelectionDivID).className = 'body';
+            document.getElementById(GroupSwapper.reviewAndApplyDivID).className = 'hide';
+            document.getElementById(GroupSwapper.identicalInputsDivID).className = 'hide';
         }
     }
     // missing one or both objects
     else
     {
-        document.getElementById(missingSelectionsDivID).className = 'body';
-        document.getElementById(incompatibleSelectionDivID).className = 'hide';
-        document.getElementById(reviewAndApplyDivID).className = 'hide';
-        document.getElementById(identicalInputsDivID).className = 'hide';
+        document.getElementById(GroupSwapper.missingSelectionsDivID).className = 'body';
+        document.getElementById(GroupSwapper.incompatibleSelectionDivID).className = 'hide';
+        document.getElementById(GroupSwapper.reviewAndApplyDivID).className = 'hide';
+        document.getElementById(GroupSwapper.identicalInputsDivID).className = 'hide';
     }
 
 }
 
 /*** application code - runs asynchronously from plugin process to communicate with FormIt ***/
 
-let nCurrentHistoryID;
-let nHistoryDepth;
+GroupSwapper.nHistoryID = undefined;
+GroupSwapper.nHistoryDepth = undefined;
 
 // flags for whether both selections are available and valid
-let bIsCopyObjectAvailable;
-let bIsReplaceObjectAvailable;
+GroupSwapper.bIsCopyObjectAvailable = undefined;
+GroupSwapper.bIsReplaceObjectAvailable = undefined;
 
 // globals to store pertinent data to display after both selections are completed
-let nCopyObjectInstanceID;
-let nCopyObjectGroupID;
-let nCopyObjectHistoryID;
-let copyObjectName;
-let nCopyObjectInstanceCount;
-let aCopyObjectInstancePaths;
+GroupSwapper.nCopyObjectInstanceID;
+GroupSwapper.nCopyObjectGroupID;
+GroupSwapper.nCopyObjectHistoryID;
+GroupSwapper.copyObjectName;
+GroupSwapper.nCopyObjectInstanceCount;
+GroupSwapper.aCopyObjectInstancePaths;
 
-let nReplaceObjectHistoryID;
-let replaceObjectName
-let nReplaceObjectInstanceCount;
-let aReplaceObjectInstancePaths;
+GroupSwapper.nReplaceObjectHistoryID;
+GroupSwapper.replaceObjectName;
+GroupSwapper.nReplaceObjectInstanceCount;
+GroupSwapper.aReplaceObjectInstancePaths;
 
 GroupSwapper.getSelectedInstanceData = async function()
 {
     // get current history
-    nCurrentHistoryID = await FormIt.GroupEdit.GetEditingHistoryID();
+    GroupSwapper.nHistoryID = await FormIt.GroupEdit.GetEditingHistoryID();
 
     // get current selection
     let aCurrentSelection = await FormIt.Selection.GetSelections();
@@ -315,23 +315,23 @@ GroupSwapper.getSelectedInstanceData = async function()
         let nObjectID = aCurrentSelection[0]["ids"][nHistoryDepth]["Object"];
 
         // get object type of the current selection
-        let nType = await WSM.APIGetObjectTypeReadOnly(nCurrentHistoryID, nObjectID);
+        let nType = await WSM.APIGetObjectTypeReadOnly(GroupSwapper.nHistoryID, nObjectID);
 
         // get group instance info, if there are any selected, and push the results into arrays
         if (nType == WSM.nObjectType.nInstanceType)
         {
             // get the Group family ID
-            let aGroupIDs = await WSM.APIGetObjectsByTypeReadOnly(nCurrentHistoryID, nObjectID, WSM.nObjectType.nGroupType, true);
+            let aGroupIDs = await WSM.APIGetObjectsByTypeReadOnly(GroupSwapper.nHistoryID, nObjectID, WSM.nObjectType.nGroupType, true);
             let nGroupID = aGroupIDs[0];
 
             // get the Group family History ID
-            let nGroupHistoryID = await WSM.APIGetGroupReferencedHistoryReadOnly(nCurrentHistoryID, nGroupID);
+            let nGroupHistoryID = await WSM.APIGetGroupReferencedHistoryReadOnly(GroupSwapper.nHistoryID, nGroupID);
 
             // get the Group family name
             //let groupName = PropertiesPlus.getGroupFamilyName(nGroupHistoryID);
             let groupName = await PropertiesPlus.getGroupFamilyName(nGroupHistoryID);
 
-            let nGroupReferenceHistoryID = await WSM.APIGetGroupReferencedHistoryReadOnly(nCurrentHistoryID, nGroupID);
+            let nGroupReferenceHistoryID = await WSM.APIGetGroupReferencedHistoryReadOnly(GroupSwapper.nHistoryID, nGroupID);
             //console.log("Reference history for this Group: " + referenceHistoryID);
     
             // determine how many total instances of this Group are in the model
@@ -361,12 +361,12 @@ GroupSwapper.tryGetGroupToCopy = async function()
     
     if (selectedInstanceProperties)
     {
-        copyObjectName = selectedInstanceProperties.groupName;
-        nCopyObjectInstanceID = selectedInstanceProperties.nInstanceID;
-        nCopyObjectGroupID = selectedInstanceProperties.nGroupID;
-        nCopyObjectHistoryID = selectedInstanceProperties.nGroupHistoryID;
-        nCopyObjectInstanceCount = selectedInstanceProperties.nIdenticalInstanceCount;
-        aCopyObjectInstancePaths = selectedInstanceProperties.aIdenticalGroupInstances;
+        GroupSwapper.copyObjectName = selectedInstanceProperties.groupName;
+        GroupSwapper.nCopyObjectInstanceID = selectedInstanceProperties.nInstanceID;
+        GroupSwapper.nCopyObjectGroupID = selectedInstanceProperties.nGroupID;
+        GroupSwapper.nCopyObjectHistoryID = selectedInstanceProperties.nGroupHistoryID;
+        GroupSwapper.nCopyObjectInstanceCount = selectedInstanceProperties.nIdenticalInstanceCount;
+        GroupSwapper.aCopyObjectInstancePaths = selectedInstanceProperties.aIdenticalGroupInstances;
         
         await GroupSwapper.setCopyObjectToActiveState(selectedInstanceProperties);
     }
@@ -375,12 +375,12 @@ GroupSwapper.tryGetGroupToCopy = async function()
     {
         await FormIt.Selection.ClearSelections();
 
-        let message = selectionMessagePrefixText + "to copy";
+        let message = GroupSwapper.selectionMessagePrefixText + "to copy";
         await FormIt.UI.ShowNotification(message, FormIt.NotificationType.Information, 0);
         console.log("\n" + message);
 
-        bIsCopyObjectAvailable = false;
-        bIsSelectionForCopyInProgress = true;
+        GroupSwapper.bIsCopyObjectAvailable = false;
+        GroupSwapper.bIsSelectionForCopyInProgress = true;
 
         GroupSwapper.setCopyObjectToSelectingState();
         await GroupSwapper.updateUIForComparisonCheck();
@@ -395,10 +395,10 @@ GroupSwapper.tryGetGroupToReplace = async function()
     
     if (selectedInstanceProperties)
     {
-        replaceObjectName = selectedInstanceProperties.groupName;
-        nReplaceObjectHistoryID = selectedInstanceProperties.nGroupHistoryID;
-        nReplaceObjectInstanceCount = selectedInstanceProperties.nIdenticalInstanceCount;
-        aReplaceObjectInstancePaths = selectedInstanceProperties.aIdenticalGroupInstances;
+        GroupSwapper.replaceObjectName = selectedInstanceProperties.groupName;
+        GroupSwapper.nReplaceObjectHistoryID = selectedInstanceProperties.nGroupHistoryID;
+        GroupSwapper.nReplaceObjectInstanceCount = selectedInstanceProperties.nIdenticalInstanceCount;
+        GroupSwapper.aReplaceObjectInstancePaths = selectedInstanceProperties.aIdenticalGroupInstances;
 
         await GroupSwapper.setReplaceObjectToActiveState(selectedInstanceProperties);
     }
@@ -407,12 +407,12 @@ GroupSwapper.tryGetGroupToReplace = async function()
     {
         await FormIt.Selection.ClearSelections();
 
-        let message = selectionMessagePrefixText + "to replace";
+        let message = GroupSwapper.selectionMessagePrefixText + "to replace";
         await FormIt.UI.ShowNotification(message, FormIt.NotificationType.Information, 0);
         console.log("\n" + message);
 
-        bIsReplaceObjectAvailable = false;
-        bIsSelectionForReplaceInProgress = true;
+        GroupSwapper.bIsReplaceObjectAvailable = false;
+        GroupSwapper.bIsSelectionForReplaceInProgress = true;
 
         GroupSwapper.setReplaceObjectToSelectingState();
         await GroupSwapper.updateUIForComparisonCheck();
@@ -425,22 +425,22 @@ GroupSwapper.swapAllInstancesWithSelectedInstance = async function()
     await FormIt.UndoManagement.BeginState();
 
     // for each of the instances to be replaced, copy the selected instance to that location, then delete the original
-    for (var i = 0; i < nReplaceObjectInstanceCount; i++)
+    for (var i = 0; i < GroupSwapper.nReplaceObjectInstanceCount; i++)
     {
-        let replaceObjectInstanceData = await WSM.GroupInstancePath.GetFinalObjectHistoryID(aReplaceObjectInstancePaths["paths"][i]);
+        let replaceObjectInstanceData = await WSM.GroupInstancePath.GetFinalObjectHistoryID(GroupSwapper.aReplaceObjectInstancePaths["paths"][i]);
         let nReplaceObjectInstanceID = replaceObjectInstanceData["Object"];
         let nReplaceObjectContextHistoryID = replaceObjectInstanceData["History"];
         let replaceObjectInstanceTransform = await WSM.APIGetInstanceTransf3dReadOnly(nReplaceObjectContextHistoryID, nReplaceObjectInstanceID);
-        //await FormIt.ConsoleLog(JSON.stringify(aReplaceObjectInstancePaths));
+        //await FormIt.ConsoleLog(JSON.stringify(GroupSwapper.aReplaceObjectInstancePaths));
 
-        let nCopyObjectInstanceData = await WSM.GroupInstancePath.GetFinalObjectHistoryID(aReplaceObjectInstancePaths["paths"][0]);
+        let nCopyObjectInstanceData = await WSM.GroupInstancePath.GetFinalObjectHistoryID(GroupSwapper.aReplaceObjectInstancePaths["paths"][0]);
         let nCopyObjectContextHistoryID = nCopyObjectInstanceData["History"];
 
         // if the copy object and replace object are in the same history, proceed
         if (nCopyObjectContextHistoryID == nReplaceObjectContextHistoryID)
         {
             // create new instances of the copy object, transformed to match the replacement object
-            await WSM.APIAddInstancesToGroup(nReplaceObjectContextHistoryID, nCopyObjectGroupID, replaceObjectInstanceTransform);
+            await WSM.APIAddInstancesToGroup(nReplaceObjectContextHistoryID, GroupSwapper.nCopyObjectGroupID, replaceObjectInstanceTransform);
 
             // delete the instance that has now been replaced
             await WSM.APIDeleteObject(nReplaceObjectContextHistoryID, nReplaceObjectInstanceID);
@@ -450,7 +450,7 @@ GroupSwapper.swapAllInstancesWithSelectedInstance = async function()
         {
             // TODO: figure out how to get this to work
 
-            //await WSM.APICopyOrSketchAndTransformObjects(nCopyObjectContextHistoryID, nReplaceObjectContextHistoryID, nCopyObjectInstanceID, replaceObjectInstanceTransform, 1, false);
+            //await WSM.APICopyOrSketchAndTransformObjects(nCopyObjectContextHistoryID, nReplaceObjectContextHistoryID, GroupSwapper.nCopyObjectInstanceID, replaceObjectInstanceTransform, 1, false);
         }
     }
 
