@@ -1,6 +1,6 @@
 {
     "PluginName": "Group Swapper",
-    "PluginDescription": "Swap all instances of one Group with another.",
+    "PluginDescription": "Swap instances of one Group with another.",
     "PluginType": "Panel",
     "Scripts": [
         "https://formit3d.github.io/PropertiesPlus/PropertiesPlus_Client.js"
