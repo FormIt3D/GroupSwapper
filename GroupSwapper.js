@@ -108,7 +108,7 @@ GroupSwapper.initializeUI = async function()
 
     // when the selections are fulfilled, but incompatible
     let incompatibleSelectionsDiv = contentContainer.appendChild(document.createElement('p'));
-    incompatibleSelectionsDiv.innerHTML = 'These Groups are identical. Select an instance from a different Group for each of the two buttons above.';
+    incompatibleSelectionsDiv.innerHTML = 'These Groups are identical.<br><br> Select an instance from a different Group for each of the two buttons above.';
     incompatibleSelectionsDiv.id = GroupSwapper.identicalGroupInstancesDivID;
     contentContainer.appendChild(incompatibleSelectionsDiv);
 
@@ -446,7 +446,7 @@ GroupSwapper.tryGetGroupToCopy = async function()
         // clean up old notification handles, and show a new notification
         await FormIt.UI.CloseNotification(GroupSwapper.selectionFailedNotificationHandle);
         GroupSwapper.selectionFailedNotificationHandle = undefined;
-        GroupSwapper.selectionInProgressNotificationHandle = await FormIt.UI.ShowNotification(GroupSwapper.selectionMessagePrefixText + "to copy.", FormIt.NotificationType.Information, 0);
+        GroupSwapper.selectionInProgressNotificationHandle = await FormIt.UI.ShowNotification(GroupSwapper.selectionMessagePrefixText + "to copy...", FormIt.NotificationType.Information, 0);
     }
     // otherwise, this is the second time the user is trying to select
     // if it doesn't work at this point, consider the selection unset and end the selection session
@@ -505,7 +505,7 @@ GroupSwapper.tryGetGroupToReplace = async function()
         // clean up old notification handles, and show a new notification
         await FormIt.UI.CloseNotification(GroupSwapper.selectionFailedNotificationHandle);
         GroupSwapper.selectionFailedNotificationHandle = undefined;
-        GroupSwapper.selectionInProgressNotificationHandle = await FormIt.UI.ShowNotification(GroupSwapper.selectionMessagePrefixText + "to copy.", FormIt.NotificationType.Information, 0);
+        GroupSwapper.selectionInProgressNotificationHandle = await FormIt.UI.ShowNotification(GroupSwapper.selectionMessagePrefixText + "to replace...", FormIt.NotificationType.Information, 0);
     }
     // otherwise, this is the second time the user is trying to select
     // if it doesn't work at this point, consider the selection unset and end the selection session
