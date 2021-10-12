@@ -24,6 +24,8 @@ GroupSwapper.reviewAndApplyDivID = 'reviewAndApplySection';
 GroupSwapper.reviewAndApplyDetailsDivID = 'reviewAndApplyDetails';
 
 GroupSwapper.selectionMessagePrefixText = 'Select a Group instance ';
+GroupSwapper.selectionSuccessMessageText = 'Selection received!'
+GroupSwapper.selectionFailureMessageText = 'The selection must be a Group instance. \nTry again, and select a Group instance when prompted.'
 GroupSwapper.historyIDPrefixText = 'ID: ';
 GroupSwapper.groupNamePrefixText = '';
 GroupSwapper.identicalInstancePrefixText = 'Instances in model: ';
@@ -302,6 +304,10 @@ GroupSwapper.updateUIForComparisonCheck = async function()
 GroupSwapper.nHistoryID = undefined;
 GroupSwapper.nHistoryDepth = undefined;
 
+// store the notification handles so they can be dismissed to prevent stacking notifications
+GroupSwapper.selectionInProgressNotificationHandle = undefined;
+GroupSwapper.selectionFailedNotificationHandle = undefined;
+
 // flags for whether both selections are available and valid
 GroupSwapper.bIsCopyObjectAvailable = undefined;
 GroupSwapper.bIsReplaceObjectAvailable = undefined;
@@ -399,12 +405,12 @@ GroupSwapper.getSelectedInstanceData = async function()
     }
 }
 
-// get the current history, query the selection, and report the number of items successfully selected
+// try to get the copy group
 GroupSwapper.tryGetGroupToCopy = async function()
 {
     let selectedInstanceProperties = await GroupSwapper.getSelectedInstanceData();
-    //await FormIt.ConsoleLog("Test! " + (JSON.stringify(propertiesObject)));
     
+    // selection was successful
     if (selectedInstanceProperties)
     {
         GroupSwapper.copyObjectName = selectedInstanceProperties.groupName;
@@ -416,30 +422,56 @@ GroupSwapper.tryGetGroupToCopy = async function()
         GroupSwapper.aCopyObjectInstancePaths = selectedInstanceProperties.aIdenticalGroupInstancesInContext;
         
         await GroupSwapper.setCopyObjectToActiveState(selectedInstanceProperties);
-    }
-    // if the selection isn't valid, put the user in select mode
-    else
-    {
+
         await FormIt.Selection.ClearSelections();
 
-        let message = GroupSwapper.selectionMessagePrefixText + "to copy.";
-        await FormIt.UI.ShowNotification(message, FormIt.NotificationType.Information, 0);
-        console.log("\n" + message);
+        // clean up old notification handles, and show a new notification
+        await FormIt.UI.CloseNotification(GroupSwapper.selectionInProgressNotificationHandle);    
+        GroupSwapper.selectionInProgressNotificationHandle = undefined;
+        await FormIt.UI.ShowNotification(GroupSwapper.selectionSuccessMessageText, FormIt.NotificationType.Success, 0);
+        GroupSwapper.selectionFailedNotificationHandle = undefined;
+    }
+    // if the selection isn't valid, and if the in-progress notification handle hasn't been defined,
+    // put the user back into selection mode
+    else if (!selectedInstanceProperties && GroupSwapper.selectionInProgressNotificationHandle == undefined)
+    {
+        await FormIt.Selection.ClearSelections();
 
         GroupSwapper.bIsCopyObjectAvailable = false;
         GroupSwapper.bIsSelectionForCopyInProgress = true;
 
         GroupSwapper.setCopyObjectToSelectingState();
         await GroupSwapper.updateUIForComparisonCheck();
+
+        // clean up old notification handles, and show a new notification
+        await FormIt.UI.CloseNotification(GroupSwapper.selectionFailedNotificationHandle);
+        GroupSwapper.selectionFailedNotificationHandle = undefined;
+        GroupSwapper.selectionInProgressNotificationHandle = await FormIt.UI.ShowNotification(GroupSwapper.selectionMessagePrefixText + "to copy.", FormIt.NotificationType.Information, 0);
+    }
+    // otherwise, this is the second time the user is trying to select
+    // if it doesn't work at this point, consider the selection unset and end the selection session
+    else if (!selectedInstanceProperties && GroupSwapper.selectionInProgressNotificationHandle)
+    {
+        await FormIt.Selection.ClearSelections();
+
+        GroupSwapper.bIsCopyObjectAvailable = false;
+        GroupSwapper.bIsSelectionForCopyInProgress = false;
+
+        GroupSwapper.setCopyObjectToUnsetState();
+
+        // clean up old notification handles, and show a new notification
+        GroupSwapper.selectionFailedNotificationHandle = await FormIt.UI.ShowNotification(GroupSwapper.selectionFailureMessageText, FormIt.NotificationType.Error, 0);
+        await FormIt.UI.CloseNotification(GroupSwapper.selectionInProgressNotificationHandle);
+        GroupSwapper.selectionInProgressNotificationHandle = undefined;
     }
 }
 
-// get the current history, query the selection, and report the number of items successfully selected
+// try to get the replacement group
 GroupSwapper.tryGetGroupToReplace = async function()
 {
     let selectedInstanceProperties = await GroupSwapper.getSelectedInstanceData();
-    //await FormIt.ConsoleLog("Test! " + (JSON.stringify(propertiesObject)));
     
+    // selection was successful
     if (selectedInstanceProperties)
     {
         GroupSwapper.replaceObjectName = selectedInstanceProperties.groupName;
@@ -449,21 +481,47 @@ GroupSwapper.tryGetGroupToReplace = async function()
         GroupSwapper.aReplaceObjectInstancePaths = selectedInstanceProperties.aIdenticalGroupInstancesInContext;
 
         await GroupSwapper.setReplaceObjectToActiveState(selectedInstanceProperties);
-    }
-    // if the selection isn't valid, put the user in select mode
-    else
-    {
+
         await FormIt.Selection.ClearSelections();
 
-        let message = GroupSwapper.selectionMessagePrefixText + "to replace.";
-        await FormIt.UI.ShowNotification(message, FormIt.NotificationType.Information, 0);
-        console.log("\n" + message);
+        // clean up old notification handles, and show a new notification
+        await FormIt.UI.CloseNotification(GroupSwapper.selectionInProgressNotificationHandle);    
+        GroupSwapper.selectionInProgressNotificationHandle = undefined;
+        await FormIt.UI.ShowNotification(GroupSwapper.selectionSuccessMessageText, FormIt.NotificationType.Success, 0);
+        GroupSwapper.selectionFailedNotificationHandle = undefined;
+    }
+    // if the selection isn't valid, and if the in-progress notification handle hasn't been defined,
+    // put the user back into selection mode
+    else if (!selectedInstanceProperties && GroupSwapper.selectionInProgressNotificationHandle == undefined)
+    {
+        await FormIt.Selection.ClearSelections();
 
         GroupSwapper.bIsReplaceObjectAvailable = false;
         GroupSwapper.bIsSelectionForReplaceInProgress = true;
 
         GroupSwapper.setReplaceObjectToSelectingState();
         await GroupSwapper.updateUIForComparisonCheck();
+
+        // clean up old notification handles, and show a new notification
+        await FormIt.UI.CloseNotification(GroupSwapper.selectionFailedNotificationHandle);
+        GroupSwapper.selectionFailedNotificationHandle = undefined;
+        GroupSwapper.selectionInProgressNotificationHandle = await FormIt.UI.ShowNotification(GroupSwapper.selectionMessagePrefixText + "to copy.", FormIt.NotificationType.Information, 0);
+    }
+    // otherwise, this is the second time the user is trying to select
+    // if it doesn't work at this point, consider the selection unset and end the selection session
+    else if (!selectedInstanceProperties && GroupSwapper.selectionInProgressNotificationHandle)
+    {
+        await FormIt.Selection.ClearSelections();
+
+        GroupSwapper.bIsReplaceObjectAvailable = false;
+        GroupSwapper.bIsSelectionForReplaceInProgress = false;
+
+        GroupSwapper.setReplaceObjectToUnsetState();
+
+        // clean up old notification handles, and show a new notification
+        GroupSwapper.selectionFailedNotificationHandle = await FormIt.UI.ShowNotification(GroupSwapper.selectionFailureMessageText, FormIt.NotificationType.Error, 0);
+        await FormIt.UI.CloseNotification(GroupSwapper.selectionInProgressNotificationHandle);
+        GroupSwapper.selectionInProgressNotificationHandle = undefined;
     }
 }
 
