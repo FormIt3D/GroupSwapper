@@ -17,8 +17,6 @@
             // subscribe to the message sent when selection is changed
             FormItInterface.SubscribeMessage("FormIt.Message.kSelectionsChanged", async function(msg)
             {
-                var jsonMessage = JSON.parse(msg);
-
                 if (GroupSwapper.bIsSelectionForCopyInProgress)
                 {
                     // when the FormIt selection changes, automatically update the plugin UI
