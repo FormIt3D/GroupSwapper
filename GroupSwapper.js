@@ -43,11 +43,11 @@ GroupSwapper.initializeUI = async function()
     window.document.body.appendChild(contentContainer);
 
     // create the header
-    contentContainer.appendChild(new FormIt.PluginUI.HeaderModule('Group Swapper', 'Replace all instances of one Group with another.').element);
+    contentContainer.appendChild(new FormIt.PluginUI.HeaderModule('Group Swapper', 'Replace instances of one Group with another.').element);
 
     // create the message about changes being limited to the editing context only
     let editingContextOnlyMessage = document.createElement('div');
-    editingContextOnlyMessage.innerHTML = 'Replacements will only occur in the current editing context.';
+    editingContextOnlyMessage.innerHTML = 'Instances will only be replaced in the context where the replacement Group was selected.';
     contentContainer.appendChild(editingContextOnlyMessage);
     
 
@@ -576,5 +576,13 @@ GroupSwapper.swapAllInstancesWithSelectedInstance = async function()
         }
     }
 
+    // show a success message after the operation completes
+    let operationSuccessMessage = 'Swapped ' + GroupSwapper.nReplaceObjectInstanceCount + ' instances of ' + GroupSwapper.replaceObjectName + ' with ' + GroupSwapper.copyObjectName + '.';
+    await FormIt.UI.ShowNotification(operationSuccessMessage, FormIt.NotificationType.Success, 0);
+
     await FormIt.UndoManagement.EndState("Group Swapper plugin");
+
+    // set the replacement object to unset state after the operation completes
+    GroupSwapper.setReplaceObjectToUnsetState();
+    GroupSwapper.updateUIForComparisonCheck();
 }
