@@ -47,7 +47,7 @@ GroupSwapper.initializeUI = async function()
 
     // create the message about changes being limited to the editing context only
     let editingContextOnlyMessage = document.createElement('div');
-    editingContextOnlyMessage.innerHTML = 'Instances will only be replaced in the context where the replacement Group was selected.';
+    editingContextOnlyMessage.innerHTML = 'Replacements will only occur in the context where the replacement Group is selected.';
     contentContainer.appendChild(editingContextOnlyMessage);
     
 
