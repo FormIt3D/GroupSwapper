@@ -426,7 +426,11 @@ GroupSwapper.tryGetGroupToCopy = async function()
         await FormIt.Selection.ClearSelections();
 
         // clean up old notification handles, and show a new notification
-        await FormIt.UI.CloseNotification(GroupSwapper.selectionInProgressNotificationHandle);    
+        if (GroupSwapper.selectionInProgressNotificationHandle != undefined)
+        {
+            await FormIt.UI.CloseNotification(GroupSwapper.selectionInProgressNotificationHandle);   
+        }
+ 
         GroupSwapper.selectionInProgressNotificationHandle = undefined;
         await FormIt.UI.ShowNotification(GroupSwapper.selectionSuccessMessageText, FormIt.NotificationType.Success, 0);
         GroupSwapper.selectionFailedNotificationHandle = undefined;
@@ -444,7 +448,11 @@ GroupSwapper.tryGetGroupToCopy = async function()
         await GroupSwapper.updateUIForComparisonCheck();
 
         // clean up old notification handles, and show a new notification
-        await FormIt.UI.CloseNotification(GroupSwapper.selectionFailedNotificationHandle);
+        if (GroupSwapper.selectionFailedNotificationHandle != undefined)
+        {
+            await FormIt.UI.CloseNotification(GroupSwapper.selectionFailedNotificationHandle);
+        }
+
         GroupSwapper.selectionFailedNotificationHandle = undefined;
         GroupSwapper.selectionInProgressNotificationHandle = await FormIt.UI.ShowNotification(GroupSwapper.selectionMessagePrefixText + "to copy...", FormIt.NotificationType.Information, 0);
     }
@@ -461,7 +469,11 @@ GroupSwapper.tryGetGroupToCopy = async function()
 
         // clean up old notification handles, and show a new notification
         GroupSwapper.selectionFailedNotificationHandle = await FormIt.UI.ShowNotification(GroupSwapper.selectionFailureMessageText, FormIt.NotificationType.Error, 0);
-        await FormIt.UI.CloseNotification(GroupSwapper.selectionInProgressNotificationHandle);
+        if (GroupSwapper.selectionInProgressNotificationHandle != undefined)
+        {
+            await FormIt.UI.CloseNotification(GroupSwapper.selectionInProgressNotificationHandle);
+        }
+
         GroupSwapper.selectionInProgressNotificationHandle = undefined;
     }
 }
@@ -485,7 +497,10 @@ GroupSwapper.tryGetGroupToReplace = async function()
         await FormIt.Selection.ClearSelections();
 
         // clean up old notification handles, and show a new notification
-        await FormIt.UI.CloseNotification(GroupSwapper.selectionInProgressNotificationHandle);    
+        if (GroupSwapper.selectionInProgressNotificationHandle != undefined)
+        {
+            await FormIt.UI.CloseNotification(GroupSwapper.selectionInProgressNotificationHandle);    
+        }
         GroupSwapper.selectionInProgressNotificationHandle = undefined;
         await FormIt.UI.ShowNotification(GroupSwapper.selectionSuccessMessageText, FormIt.NotificationType.Success, 0);
         GroupSwapper.selectionFailedNotificationHandle = undefined;
@@ -503,7 +518,11 @@ GroupSwapper.tryGetGroupToReplace = async function()
         await GroupSwapper.updateUIForComparisonCheck();
 
         // clean up old notification handles, and show a new notification
-        await FormIt.UI.CloseNotification(GroupSwapper.selectionFailedNotificationHandle);
+        if (GroupSwapper.selectionFailedNotificationHandle != undefined)
+        {
+            await FormIt.UI.CloseNotification(GroupSwapper.selectionFailedNotificationHandle);
+        }
+
         GroupSwapper.selectionFailedNotificationHandle = undefined;
         GroupSwapper.selectionInProgressNotificationHandle = await FormIt.UI.ShowNotification(GroupSwapper.selectionMessagePrefixText + "to replace...", FormIt.NotificationType.Information, 0);
     }
@@ -520,7 +539,11 @@ GroupSwapper.tryGetGroupToReplace = async function()
 
         // clean up old notification handles, and show a new notification
         GroupSwapper.selectionFailedNotificationHandle = await FormIt.UI.ShowNotification(GroupSwapper.selectionFailureMessageText, FormIt.NotificationType.Error, 0);
-        await FormIt.UI.CloseNotification(GroupSwapper.selectionInProgressNotificationHandle);
+        if (GroupSwapper.selectionInProgressNotificationHandle != undefined) 
+        {
+            await FormIt.UI.CloseNotification(GroupSwapper.selectionInProgressNotificationHandle);
+        }
+
         GroupSwapper.selectionInProgressNotificationHandle = undefined;
     }
 }
@@ -533,10 +556,6 @@ GroupSwapper.swapAllInstancesWithSelectedInstance = async function()
     // keep track of all instances that have already been swapped
     // this will prevent over-swapping in case the editing context history has multiple instances in the model
     let aCompletedInstanceIDs = [];
-
-    // get information about the copy instance only once
-    let nCopyObjectInstanceData = await WSM.GroupInstancePath.GetFinalObjectHistoryID(GroupSwapper.aCopyObjectInstancePaths["paths"][0]);
-    let nCopyObjectContextHistoryID = nCopyObjectInstanceData["History"];
 
     // for each of the instances to be replaced, copy the selected instance to that location, then delete the original
     for (var i = 0; i < GroupSwapper.nReplaceObjectInstanceCount; i++)
@@ -559,7 +578,7 @@ GroupSwapper.swapAllInstancesWithSelectedInstance = async function()
         }
 
         // if the copy object and replace object are in the same history, proceed
-        if (nCopyObjectContextHistoryID == nReplaceObjectContextHistoryID)
+        if (GroupSwapper.nCopyObjectContextHistoryID == nReplaceObjectContextHistoryID)
         {
             // create new instances of the copy object, transformed to match the replacement object
             await WSM.APIAddInstancesToGroup(nReplaceObjectContextHistoryID, GroupSwapper.nCopyObjectGroupID, replaceObjectInstanceTransform);
