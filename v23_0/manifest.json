@@ -1,0 +1,11 @@
+{
+    "PluginName": "Group Swapper",
+    "PluginDescription": "Swap instances of one Group with another.",
+    "PluginType": "Panel",
+    "Scripts": [
+        "https://formit3d.github.io/PropertiesPlus/PropertiesPlus_Client.js"
+    ]
+    ,"Panel": "PLUGINLOCATION/index.html",
+    "PanelIcon": "PLUGINLOCATION/img/group_swapper@2x.png",
+    "Platforms": ["Windows", "Web"]
+}
