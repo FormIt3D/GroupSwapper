@@ -9,7 +9,9 @@ if (typeof GroupSwapper == 'undefined')
 GroupSwapper.bIsSelectionForCopyInProgress = false;
 GroupSwapper.bIsSelectionForReplaceInProgress = false;
 
-// IDs input elements that need to be referenced or updated
+// input elements that need to be referenced or updated
+GroupSwapper.replacementTypeRadioButtonCurrentContext = undefined;
+GroupSwapper.replacementTypeRadioButtonEntireModel = undefined;
 // copy object section
 GroupSwapper.copyObjectGroupNameID = 'copyObjectGroupName';
 GroupSwapper.copyObjectInstanceCountID = 'bopyObjectInstanceCount';
@@ -22,6 +24,7 @@ GroupSwapper.identicalGroupInstancesDivID = 'identicalGroupInstancesDiv';
 GroupSwapper.differentContextHistoriesDivID = 'differentContextHistoriesDiv';
 GroupSwapper.reviewAndApplyDivID = 'reviewAndApplySection';
 GroupSwapper.reviewAndApplyDetailsDivID = 'reviewAndApplyDetails';
+GroupSwapper.affectStatement = undefined;
 
 GroupSwapper.selectionMessagePrefixText = 'Select a Group instance ';
 GroupSwapper.selectionSuccessMessageText = 'Selection received!'
@@ -45,11 +48,27 @@ GroupSwapper.initializeUI = async function()
     // create the header
     contentContainer.appendChild(new FormIt.PluginUI.HeaderModule('Group Swapper', 'Replace instances of one Group with another.').element);
 
-    // create the message about changes being limited to the editing context only
-    let editingContextOnlyMessage = document.createElement('div');
-    editingContextOnlyMessage.innerHTML = 'Replacements will only occur in the context where the replacement Group is selected.';
-    contentContainer.appendChild(editingContextOnlyMessage);
+    // create the message about choosing the context(s) in which to make replacements
+    let replacementTypeSubheader = contentContainer.appendChild(document.createElement('p'));
+    replacementTypeSubheader.style = 'font-weight: bold;'
+    replacementTypeSubheader.innerHTML = 'Replacement Scope';
     
+    // create the radio buttons for choosing the context(s) in which to make replacements
+    // current context only
+    GroupSwapper.replacementTypeRadioButtonCurrentContext = new FormIt.PluginUI.RadioButtonModule('Current context only', 'context');
+    GroupSwapper.replacementTypeRadioButtonCurrentContext.getInput().checked = true;
+    GroupSwapper.replacementTypeRadioButtonCurrentContext.getInput().onclick = function()
+    {
+        GroupSwapper.updateAffectStatement();
+    };
+    contentContainer.appendChild(GroupSwapper.replacementTypeRadioButtonCurrentContext.element);
+    // all histories
+    GroupSwapper.replacementTypeRadioButtonEntireModel = new FormIt.PluginUI.RadioButtonModule('Entire model', 'context');
+    GroupSwapper.replacementTypeRadioButtonEntireModel.getInput().onclick = function()
+    {
+        GroupSwapper.updateAffectStatement();
+    };
+    contentContainer.appendChild(GroupSwapper.replacementTypeRadioButtonEntireModel.element);
 
     /* group to copy */
 
@@ -256,17 +275,12 @@ GroupSwapper.updateUIForComparisonCheck = async function()
             // line break
             document.getElementById(GroupSwapper.reviewAndApplyDetailsDivID).appendChild(document.createElement('br'));
 
-            let affectStatement = document.createElement('div');
-            if (GroupSwapper.nReplaceObjectInstanceCount > 1)
-            {
-                affectStatement.innerHTML = 'This operation will affect ' + GroupSwapper.nReplaceObjectInstanceCount + ' instances in the model.';
-            }
-            else 
-            {
-                affectStatement.innerHTML = 'This operation will affect ' + GroupSwapper.nReplaceObjectInstanceCount + ' instance in the model.';
-            }
+            // create the affect statement
+            GroupSwapper.affectStatement = document.createElement('div');
+            // update the affect statement
+            GroupSwapper.updateAffectStatement();
 
-            document.getElementById(GroupSwapper.reviewAndApplyDetailsDivID).appendChild(affectStatement);
+            document.getElementById(GroupSwapper.reviewAndApplyDetailsDivID).appendChild(GroupSwapper.affectStatement);
 
             // line break
             document.getElementById(GroupSwapper.reviewAndApplyDetailsDivID).appendChild(document.createElement('br'));
@@ -299,6 +313,25 @@ GroupSwapper.updateUIForComparisonCheck = async function()
 
 }
 
+GroupSwapper.updateAffectStatement = function()
+{
+    if (GroupSwapper.affectStatement != undefined)
+    {
+        // update the correct paths and counts
+        GroupSwapper.aReplaceObjectInstancePathsFinal = GroupSwapper.replacementTypeRadioButtonCurrentContext.getInput().checked ? GroupSwapper.aReplaceObjectInstancePathsContextOnly : GroupSwapper.aReplaceObjectInstancePaths;
+        GroupSwapper.nReplaceObjectInstanceCountFinal = GroupSwapper.replacementTypeRadioButtonCurrentContext.getInput().checked ? GroupSwapper.nReplaceObjectInstanceCountContextOnly : GroupSwapper.nReplaceObjectInstanceCount;
+
+        if (GroupSwapper.nReplaceObjectInstanceCountFinal > 1)
+        {
+            GroupSwapper.affectStatement.innerHTML = 'This operation will affect ' + GroupSwapper.nReplaceObjectInstanceCountFinal + ' instances in the model.';
+        }
+        else 
+        {
+            GroupSwapper.affectStatement.innerHTML = 'This operation will affect ' + GroupSwapper.nReplaceObjectInstanceCountFinal + ' instance in the model.';
+        }
+    }
+}
+
 /*** application code - runs asynchronously from plugin process to communicate with FormIt ***/
 
 GroupSwapper.nHistoryID = undefined;
@@ -325,7 +358,11 @@ GroupSwapper.nReplaceObjectHistoryID = undefined;
 GroupSwapper.nReplaceObjectContextHistoryID = undefined;
 GroupSwapper.replaceObjectName = undefined;
 GroupSwapper.nReplaceObjectInstanceCount = undefined;
+GroupSwapper.nReplaceObjectInstanceCountContextOnly = undefined;
 GroupSwapper.aReplaceObjectInstancePaths = undefined;
+GroupSwapper.aReplaceObjectInstancePathsContextOnly = undefined;
+GroupSwapper.nReplaceObjectInstanceCountFinal = undefined;
+GroupSwapper.aReplaceObjectInstancePathsFinal = undefined;
 
 GroupSwapper.getSelectedInstanceData = async function()
 {
@@ -369,10 +406,9 @@ GroupSwapper.getSelectedInstanceData = async function()
             //console.log("Number of instances in model: " + nIdenticalInstanceCount);
             //console.log("aIdenticalGroupInstances: " + JSON.stringify(aIdenticalGroupInstances));
 
-            // currently, this plugin only works on instances in the current context
-            // so post-process the identical instances to include only those in the same editing history
-            let aIdenticalGroupInstancesInContext = JSON.parse(JSON.stringify(aIdenticalGroupInstances)); // start with the original object
-            let nIdenticalGroupInstancesInContextCount = nIdenticalInstanceCount; // start with the original count
+            // post-process the identical instances to include only those in the same editing history
+            // start with an object containing empty arrays
+            let aIdenticalGroupInstancesInContext = { "paths":[], "transforms":[] };
 
             for (var i = 0; i < nIdenticalInstanceCount; i++)
             {
@@ -380,11 +416,10 @@ GroupSwapper.getSelectedInstanceData = async function()
                 let nInstanceContextHistoryID = instanceData["History"];
 
                 // if the editing history ID does not match the selected instance context history ID, remove it from the GroupInstancePath object
-                if (nInstanceContextHistoryID != GroupSwapper.nHistoryID)
+                if (nInstanceContextHistoryID == GroupSwapper.nHistoryID)
                 {
-                    aIdenticalGroupInstancesInContext["paths"].splice(i, 1);
-                    aIdenticalGroupInstancesInContext["transforms"].splice(i, 1);
-                    nIdenticalGroupInstancesInContextCount--;
+                    aIdenticalGroupInstancesInContext["paths"].push(aIdenticalGroupInstances["paths"][i]);
+                    aIdenticalGroupInstancesInContext["transforms"].push(aIdenticalGroupInstances["transforms"][i]);
                 }
             }
 
@@ -399,7 +434,7 @@ GroupSwapper.getSelectedInstanceData = async function()
                 "aIdenticalGroupInstances" : aIdenticalGroupInstances,
                 "nIdenticalInstanceCount" : nIdenticalInstanceCount,
                 "aIdenticalGroupInstancesInContext" : aIdenticalGroupInstancesInContext,
-                "nIdenticalGroupInstancesInContextCount" : nIdenticalGroupInstancesInContextCount
+                "nIdenticalGroupInstancesInContextCount" : aIdenticalGroupInstancesInContext["paths"].length
             };
         }
     }
@@ -489,8 +524,12 @@ GroupSwapper.tryGetGroupToReplace = async function()
         GroupSwapper.replaceObjectName = selectedInstanceProperties.groupName;
         GroupSwapper.nReplaceObjectHistoryID = selectedInstanceProperties.nGroupHistoryID;
         GroupSwapper.nReplaceObjectContextHistoryID = selectedInstanceProperties.nInstanceContextHistoryID;
-        GroupSwapper.nReplaceObjectInstanceCount = selectedInstanceProperties.nIdenticalGroupInstancesInContextCount;
-        GroupSwapper.aReplaceObjectInstancePaths = selectedInstanceProperties.aIdenticalGroupInstancesInContext;
+        GroupSwapper.nReplaceObjectInstanceCount = selectedInstanceProperties.nIdenticalInstanceCount;
+        GroupSwapper.nReplaceObjectInstanceCountContextOnly = selectedInstanceProperties.nIdenticalGroupInstancesInContextCount;
+        GroupSwapper.aReplaceObjectInstancePaths = selectedInstanceProperties.aIdenticalGroupInstances;
+        GroupSwapper.aReplaceObjectInstancePathsContextOnly = selectedInstanceProperties.aIdenticalGroupInstancesInContext;
+        GroupSwapper.nReplaceObjectInstanceCountFinal = GroupSwapper.replacementTypeRadioButtonCurrentContext.getInput().checked ? GroupSwapper.nReplaceObjectInstanceCountContextOnly : GroupSwapper.nReplaceObjectInstanceCount;
+        GroupSwapper.aReplaceObjectInstancePathsFinal = GroupSwapper.replacementTypeRadioButtonCurrentContext.getInput().checked ? GroupSwapper.aReplaceObjectInstancePathsContextOnly : GroupSwapper.aReplaceObjectInstancePaths;
 
         await GroupSwapper.setReplaceObjectToActiveState(selectedInstanceProperties);
 
@@ -555,26 +594,26 @@ GroupSwapper.swapAllInstancesWithSelectedInstance = async function()
 
     // keep track of all instances that have already been swapped
     // this will prevent over-swapping in case the editing context history has multiple instances in the model
-    let aCompletedInstanceIDs = [];
+    let aCompletedInstanceData = [];
 
     // for each of the instances to be replaced, copy the selected instance to that location, then delete the original
-    for (var i = 0; i < GroupSwapper.nReplaceObjectInstanceCount; i++)
+    for (var i = 0; i < GroupSwapper.nReplaceObjectInstanceCountFinal; i++)
     {
-        let replaceObjectInstanceData = await WSM.GroupInstancePath.GetFinalObjectHistoryID(GroupSwapper.aReplaceObjectInstancePaths["paths"][i]);
+        let replaceObjectInstanceData = await WSM.GroupInstancePath.GetFinalObjectHistoryID(GroupSwapper.aReplaceObjectInstancePathsFinal["paths"][i]);
         let nReplaceObjectInstanceID = replaceObjectInstanceData["Object"];
         let nReplaceObjectContextHistoryID = replaceObjectInstanceData["History"];
         let replaceObjectInstanceTransform = await WSM.APIGetInstanceTransf3dReadOnly(nReplaceObjectContextHistoryID, nReplaceObjectInstanceID);
-        //await FormIt.ConsoleLog(JSON.stringify(GroupSwapper.aReplaceObjectInstancePaths));
+        //await FormIt.ConsoleLog(JSON.stringify(GroupSwapper.aReplaceObjectInstancePathsFinal));
 
         // don't proceed if this instance has already been swapped
-        let bHasBeenConverted = aCompletedInstanceIDs.indexOf(nReplaceObjectInstanceID) != -1;
+        let bHasBeenConverted = aCompletedInstanceData.indexOf(replaceObjectInstanceData) != -1;
         if (bHasBeenConverted)
         {
             continue;
         }
         else
         {
-            aCompletedInstanceIDs.push(nReplaceObjectInstanceID);
+            aCompletedInstanceData.push(replaceObjectInstanceData);
         }
 
         // if the copy object and replace object are in the same history, proceed
@@ -589,14 +628,27 @@ GroupSwapper.swapAllInstancesWithSelectedInstance = async function()
         // otherwise, need to use a different API that supports cross-history operations
         else 
         {
-            // TODO: figure out how to get this to work
+            if (GroupSwapper.replacementTypeRadioButtonEntireModel.getInput().checked)
+            {
+                let copyObjectInstanceTransform = await WSM.APIGetInstanceTransf3dReadOnly(GroupSwapper.nCopyObjectContextHistoryID, GroupSwapper.nCopyObjectInstanceID);
 
-            //await WSM.APICopyOrSketchAndTransformObjects(nCopyObjectContextHistoryID, nReplaceObjectContextHistoryID, GroupSwapper.nCopyObjectInstanceID, replaceObjectInstanceTransform, 1, false);
+                let copyObjectInstanceTransformInverse = await WSM.Transf3d.Invert(copyObjectInstanceTransform);
+
+                // determine a multiplied transform
+                let newTransf3d = await WSM.Transf3d.Multiply(replaceObjectInstanceTransform, copyObjectInstanceTransformInverse);
+
+                // create new instances of the copy object, transformed to match the replacement object
+                await WSM.APICopyOrSketchAndTransformObjects(GroupSwapper.nCopyObjectContextHistoryID, nReplaceObjectContextHistoryID, GroupSwapper.nCopyObjectInstanceID, newTransf3d, 1, false);
+
+                // delete the instance that has now been replaced
+                await WSM.APIDeleteObject(nReplaceObjectContextHistoryID, nReplaceObjectInstanceID);
+            }
+
         }
     }
 
     // show a success message after the operation completes
-    let operationSuccessMessage = 'Swapped ' + GroupSwapper.nReplaceObjectInstanceCount + ' instances of ' + GroupSwapper.replaceObjectName + ' with ' + GroupSwapper.copyObjectName + '.';
+    let operationSuccessMessage = 'Swapped ' + GroupSwapper.nReplaceObjectInstanceCountFinal + ' instances of ' + GroupSwapper.replaceObjectName + ' with ' + GroupSwapper.copyObjectName + '.';
     await FormIt.UI.ShowNotification(operationSuccessMessage, FormIt.NotificationType.Success, 0);
 
     await FormIt.UndoManagement.EndState("Group Swapper plugin");
