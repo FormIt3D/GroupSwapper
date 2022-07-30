@@ -594,26 +594,28 @@ GroupSwapper.swapAllInstancesWithSelectedInstance = async function()
 
     // keep track of all instances that have already been swapped
     // this will prevent over-swapping in case the editing context history has multiple instances in the model
-    let aCompletedInstanceData = [];
+    let aCompletedInstanceDataStrings = [];
 
     // for each of the instances to be replaced, copy the selected instance to that location, then delete the original
     for (var i = 0; i < GroupSwapper.nReplaceObjectInstanceCountFinal; i++)
     {
         let replaceObjectInstanceData = await WSM.GroupInstancePath.GetFinalObjectHistoryID(GroupSwapper.aReplaceObjectInstancePathsFinal["paths"][i]);
+        // stringify the data so the indexOf operation works correctly
+        let replaceObjectInstanceDataString = JSON.stringify(replaceObjectInstanceData);
         let nReplaceObjectInstanceID = replaceObjectInstanceData["Object"];
         let nReplaceObjectContextHistoryID = replaceObjectInstanceData["History"];
         let replaceObjectInstanceTransform = await WSM.APIGetInstanceTransf3dReadOnly(nReplaceObjectContextHistoryID, nReplaceObjectInstanceID);
         //await FormIt.ConsoleLog(JSON.stringify(GroupSwapper.aReplaceObjectInstancePathsFinal));
 
         // don't proceed if this instance has already been swapped
-        let bHasBeenConverted = aCompletedInstanceData.indexOf(replaceObjectInstanceData) != -1;
+        let bHasBeenConverted = aCompletedInstanceDataStrings.indexOf(replaceObjectInstanceDataString) != -1;
         if (bHasBeenConverted)
         {
             continue;
         }
         else
         {
-            aCompletedInstanceData.push(replaceObjectInstanceData);
+            aCompletedInstanceDataStrings.push(replaceObjectInstanceDataString);
         }
 
         // if the copy object and replace object are in the same history, proceed
