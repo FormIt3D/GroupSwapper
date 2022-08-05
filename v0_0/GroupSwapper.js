@@ -432,7 +432,7 @@ GroupSwapper.tryGetGroupToCopy = async function()
         }
  
         GroupSwapper.selectionInProgressNotificationHandle = undefined;
-        await FormIt.UI.ShowNotification(GroupSwapper.selectionSuccessMessageText, FormIt.NotificationType.Success, 0);
+        await FormIt.UI.ShowNotification(GroupSwapper.selectionSuccessMessageText, FormIt.NotificationType.Information, 0);
         GroupSwapper.selectionFailedNotificationHandle = undefined;
     }
     // if the selection isn't valid, and if the in-progress notification handle hasn't been defined,
@@ -502,7 +502,7 @@ GroupSwapper.tryGetGroupToReplace = async function()
             await FormIt.UI.CloseNotification(GroupSwapper.selectionInProgressNotificationHandle);    
         }
         GroupSwapper.selectionInProgressNotificationHandle = undefined;
-        await FormIt.UI.ShowNotification(GroupSwapper.selectionSuccessMessageText, FormIt.NotificationType.Success, 0);
+        await FormIt.UI.ShowNotification(GroupSwapper.selectionSuccessMessageText, FormIt.NotificationType.Information, 0);
         GroupSwapper.selectionFailedNotificationHandle = undefined;
     }
     // if the selection isn't valid, and if the in-progress notification handle hasn't been defined,
@@ -597,7 +597,7 @@ GroupSwapper.swapAllInstancesWithSelectedInstance = async function()
 
     // show a success message after the operation completes
     let operationSuccessMessage = 'Swapped ' + GroupSwapper.nReplaceObjectInstanceCount + ' instances of ' + GroupSwapper.replaceObjectName + ' with ' + GroupSwapper.copyObjectName + '.';
-    await FormIt.UI.ShowNotification(operationSuccessMessage, FormIt.NotificationType.Success, 0);
+    await FormIt.UI.ShowNotification(operationSuccessMessage, FormIt.NotificationType.Information, 0);
 
     await FormIt.UndoManagement.EndState("Group Swapper plugin");
 
